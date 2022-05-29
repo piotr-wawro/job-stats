@@ -3,9 +3,10 @@ import json
 import numpy as np
 import matplotlib.pyplot as plt
 import requests
+import random
 
 # %%
-request = requests.get('https://justjoin.it/api/offers')
+# request = requests.get('https://justjoin.it/api/offers')
 
 if not request.ok:
     request.raise_for_status()
@@ -76,6 +77,9 @@ def get_plot_data(market: str):
             continue
 
         for employment_type in job['employment_types']:
+            if employment_type['salary'] == None:
+                continue
+
             type = employment_type['type']
             min_v = employment_type['salary']['from']
             max_v = employment_type['salary']['to']
@@ -122,3 +126,60 @@ for market in markets:
     plt.close()
 
 # %%
+for market in markets:
+    plot_data = get_plot_data(market)
+    print(f'Market: {market}'.ljust(30,'.'), end='')
+
+    count = []
+    for experience in experience_levels:
+        count.append(len(plot_data[experience]['b2b']['avg2']))
+        count.append(len(plot_data[experience]['permanent']['avg2']))
+    print(f'{min(count)}')
+
+# %%
+stat_headers = []
+stat_data: list[list[float]] = []
+
+for market in ['net', 'java', 'javascript']:
+    plot_data = get_plot_data(market)
+
+    for experience in experience_levels:
+        stat_headers.append(f'{market} {experience} b2b')
+        random.shuffle(plot_data[experience]['b2b']['avg2'])
+        stat_data.append(plot_data[experience]['b2b']['avg2'])
+
+        stat_headers.append(f'{market} {experience} permanent')
+        random.shuffle(plot_data[experience]['permanent']['avg2'])
+        stat_data.append(plot_data[experience]['permanent']['avg2'])
+
+stat_data_zip = zip(*stat_data)
+
+with open('stat.txt', 'w') as file:
+    file.write(';'.join(stat_headers))
+    file.write('\n')
+    for line in stat_data_zip:
+        file.write(';'.join(str(x) for x in line))
+        file.write('\n')
+
+# %%
+stat_headers = ['technology', 'experience', 'employment_types', 'salary']
+stat_data: list[list[str|float]] = []
+
+for market in ['net', 'java', 'javascript']:
+    plot_data = get_plot_data(market)
+
+    for experience in experience_levels:
+        random.shuffle(plot_data[experience]['b2b']['avg2'])
+        for salary in plot_data[experience]['b2b']['avg2']:
+            stat_data.append([market, experience, 'b2b', salary])
+
+        random.shuffle(plot_data[experience]['permanent']['avg2'])
+        for salary in plot_data[experience]['permanent']['avg2']:
+            stat_data.append([market, experience, 'permanent', salary])
+
+with open('stat.txt', 'w') as file:
+    file.write(';'.join(stat_headers))
+    file.write('\n')
+    for line in stat_data:
+        file.write(';'.join(str(x) for x in line))
+        file.write('\n')
